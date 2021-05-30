@@ -16,6 +16,8 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.kaVal = 1.0;
   this.kdVal = 1.0;
   this.ksVal = 1.0;
+  this.tones = 4.0;
+  this.specularTones = 2.0;
 
   // private members (inside closure)
   var canvasName = canvasName;
@@ -45,6 +47,8 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var ambientColorLoc = 0;
   var diffuseColorLoc = 0;
   var specularColorLoc = 0;
+  var tonesLoc = 0;
+  var specularTonesLoc = 0;
   var projection = new Float32Array(16);
   var modelview = new Float32Array(16);
   var currentFileName = "./knot.txt";
@@ -188,6 +192,8 @@ function Renderer(canvasName, vertSrc, fragSrc)
     if(ambientColorLoc != -1) gl.uniform3fv(ambientColorLoc, this.ambientColor);
     if(diffuseColorLoc != -1) gl.uniform3fv(diffuseColorLoc, this.diffuseColor);
     if(specularColorLoc != -1) gl.uniform3fv(specularColorLoc, this.specularColor);
+    if(tonesLoc != -1) gl.uniform1f(tonesLoc, this.tones);
+    if(specularTonesLoc != -1) gl.uniform1f(specularTonesLoc, this.specularTones);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, bufID);
     gl.drawArrays(gl.TRIANGLES, 0, sceneVertNo);
@@ -257,6 +263,8 @@ function Renderer(canvasName, vertSrc, fragSrc)
     kaLoc = gl.getUniformLocation(progID, "Ka");
     kdLoc = gl.getUniformLocation(progID, "Kd");
     ksLoc = gl.getUniformLocation(progID, "Ks");
+    tonesLoc = gl.getUniformLocation(progID, "uTones");
+    specularTonesLoc = gl.getUniformLocation(progID, "uSpecularTones");
   }
 
   // the following functions are some matrix and vector helpers
