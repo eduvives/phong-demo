@@ -17,6 +17,7 @@ var renderer = 0;
 
 function run() {
   var id = document.getElementById("select_example_id").value;
+  $("#select_num_colors").hide();
   //var vertSrc = document.getElementById("code_vert").text;
   var vertSrc = document.getElementById("GouraudVert").value;
   var fragSrc = document.getElementById("GouraudFrag").value;
@@ -35,12 +36,27 @@ function updateRenderer() {
   renderer.display();
 }
 
+function showNumColorSelect(){
+  var d = document.getElementById("select_example_id").value;
+  if(d==3){
+    $("#select_num_colors").show();
+  }else{
+    $("#select_num_colors").hide();
+  } 
+}
+
 var interval = setInterval(timerFunc, 40);
 
 function timerFunc() {
   var offset = 1.0;
   renderer.t += offset;
   renderer.display();
+}
+
+function numColorsChanged() {
+  var d = parseFloat(document.getElementById("select_num_colors").value);
+  renderer.tones = d;
+  renderer.specularTones = d / 2;
 }
 
 function modeChanged() {
@@ -67,9 +83,14 @@ function exampleChanged() {
       document.getElementById("code_frag").value = document.getElementById("PhongFrag").value;
       document.getElementById("code_vert").value = document.getElementById("PhongVert").value;
       break;
+    case 3:
+      document.getElementById("code_frag").value = document.getElementById("ToonFrag").value;
+      document.getElementById("code_vert").value = document.getElementById("ToonVert").value;
+      break;
 
   }
   updateRenderer();
+  showNumColorSelect()
 }
 </script>
 </head>
@@ -82,6 +103,12 @@ function exampleChanged() {
 <select onchange="exampleChanged()" id="select_example_id">
   <option value="1">Gouraud Shading</option>
   <option value="2">Phong Shading</option>
+  <option value="3">Toon Shading</option>
+</select>
+<select onchange="numColorsChanged()" id="select_num_colors">
+  <option value="2">2 Colors</option>
+  <option selected value="4">4 Colors</option>
+  <option value="8">8 Colors</option>
 </select>
 <select onchange="modelChanged()" id="select_id2">
   <option value="./knot.txt">Knot</option>
@@ -387,6 +414,83 @@ void main() {
   gl_FragColor = color;
 }
 
+</textarea>
+
+<textarea id="ToonVert" style="display: none;">
+attribute vec3 position;
+attribute vec3 normal;
+uniform mat4 projection, modelview, normalMat;
+varying vec3 normalInterp;
+varying vec3 vertPos;
+
+void main(void) {
+            
+    // Vertex position
+    vec4 vertPos4 = modelview * vec4(position, 1.0);
+    vertPos = vec3(vertPos4) / vertPos4.w;
+    gl_Position = projection * vertPos4;
+
+    // Vertex normal
+    normalInterp = vec3(normalMat * vec4(normal, 0.0));
+}
+</textarea>
+  
+<textarea id="ToonFrag" style="display: none;">
+precision mediump float; // set float to medium precision
+        
+// light properties
+uniform vec3 ambientColor; // the light's ambient color
+uniform vec3 diffuseColor; // the light's diffuse color
+uniform vec3 specularColor; // the light's specular color
+uniform vec3 lightPos; // the light's position
+        
+// material properties
+uniform float Ka; // the ambient reflectivity
+uniform float Kd; // the diffuse reflectivity
+uniform float Ks; // the specular reflectivity
+uniform float shininessVal; // the specular exponent
+uniform float uTones; // number of tones
+uniform float uSpecularTones; // number of specular tones
+
+// geometry properties
+varying vec3 vertPos; // world xyz of fragment - Vertex position
+varying vec3 normalInterp; // normal of fragment - Surface normal
+
+uniform int mode;   // Rendering mode
+
+void main(void) {
+        
+    // ambient term
+    vec3 ambient = Ka * ambientColor; 
+            
+    // diffuse term
+    vec3 normal = normalize(normalInterp); 
+    vec3 light = normalize(lightPos - vertPos);
+    float lambert = max(0.0, dot(normal,light));
+    float tone = floor(lambert * uTones);
+    lambert = tone / uTones;
+    vec3 diffuse = Kd * diffuseColor * lambert; // diffuse term
+            
+    // specular term
+    vec3 R = reflect(-light, normal);      // Reflected light vector
+    vec3 V = normalize(-vertPos); // Vector to viewer
+    float highlight = pow(max(0.0, dot(R, V)),shininessVal);
+    tone = floor(highlight * uSpecularTones);
+    highlight = tone / uSpecularTones;
+    vec3 specular = Ks * specularColor * highlight; // specular term
+            
+    // combine to find lit color
+    vec3 litColor = ambient + diffuse + specular;
+    
+    gl_FragColor = vec4(litColor, 1.0);
+    
+    // only ambient
+    if(mode == 2) gl_FragColor = vec4(ambient, 1.0);
+    // only diffuse
+    if(mode == 3) gl_FragColor = vec4(diffuse, 1.0);
+    // only specular
+    if(mode == 4) gl_FragColor = vec4(specular, 1.0);
+} // end main
 </textarea>
 
 </body>
