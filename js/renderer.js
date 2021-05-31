@@ -13,7 +13,7 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.clearColor = [0.0, 0.4, 0.7];
   this.attenuation = 0.01;
   this.lightType = 0; // 0 equals puntual
-  this.direction = [0.5, 0.5, 0.5];
+  this.direction = [0.4, 0.3, 0.6];
   this.angle = 0.0;
   this.exponent = 0.0;
 
@@ -150,6 +150,10 @@ function Renderer(canvasName, vertSrc, fragSrc)
       }
     }
     return data;
+  }
+
+  this.setLightType = function (newValue) {
+    this.lightType = newValue;
   }
 
   //public
