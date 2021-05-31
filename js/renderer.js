@@ -152,10 +152,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
     return data;
   }
 
-  this.setLightType = function (newValue) {
-    this.lightType = newValue;
-  }
-
   //public
   this.resize = function (w, h, fov, zNear, zFar) {
     gl.viewport(0, 0, w, h);
