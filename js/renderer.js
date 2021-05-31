@@ -75,7 +75,7 @@ function Renderer(canvasName, vertSrc, fragSrc)
   }
 
   // public
-  this.updateModel = function (newFileName) {
+  this.updateModel = function (newFileName, fov, zNear, zFar) {
     currentFileName = newFileName;
 
     gl.deleteProgram(progID);
@@ -83,11 +83,11 @@ function Renderer(canvasName, vertSrc, fragSrc)
     gl.deleteShader(fragID);
     gl.deleteBuffer(bufID);
 
-    this.init();
+    this.init(fov, zNear, zFar);
   }
 
   // public
-  this.init = function () {
+  this.init = function (fov, zNear, zFar) {
     this.canvas = window.document.getElementById(canvasName);
     try {
       gl = this.canvas.getContext("experimental-webgl");
@@ -128,7 +128,7 @@ function Renderer(canvasName, vertSrc, fragSrc)
       gl.vertexAttribPointer(normalLoc, 3, gl.FLOAT, false, stride, offset);
       gl.enableVertexAttribArray(normalLoc);
     }
-    this.resize(this.canvas.width, this.canvas.height);
+    this.resize(this.canvas.width, this.canvas.height, fov, zNear, zFar);
   }
 
   function loadVertexData(filename) {
@@ -157,11 +157,11 @@ function Renderer(canvasName, vertSrc, fragSrc)
   }
 
   //public
-  this.resize = function (w, h) {
+  this.resize = function (w, h, fov, zNear, zFar) {
     gl.viewport(0, 0, w, h);
 
     // this function replaces gluPerspective
-    mat4Perspective(projection, 32.0, w/h, 0.5, 4.0);
+    mat4Perspective(projection, fov, w/h, zNear, zFar);
     //mat4Print(projection);
   }
 
@@ -332,6 +332,12 @@ function Renderer(canvasName, vertSrc, fragSrc)
     a[3 * 4 + 2] = (2.0 * zFar * zNear) / (zNear - zFar);
     a[2 * 4 + 3] = -1.0;
     a[3 * 4 + 3] = 0.0;
+  }
+
+  // public
+  this.updatePerspective = function (fov, zNear, zFar) {
+    this.canvas = window.document.getElementById(canvasName);
+    this.resize(this.canvas.width, this.canvas.height, fov, zNear, zFar);
   }
 
   function  mat4LookAt(viewMatrix,

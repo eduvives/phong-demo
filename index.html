@@ -25,7 +25,14 @@ function run() {
   document.getElementById("code_frag").value = fragSrc;
   document.getElementById("code_vert").value = vertSrc;
   renderer = new Renderer("myWebGLCanvas", vertSrc, fragSrc);
-  renderer.init();
+
+  var zoom = $('#slider-zoom').slider("value");
+  var near = $('#slider-near').slider("value");
+  var far = $('#slider-far').slider("value");
+  renderer.init(zoom,near,far);
+  $('#slider-zoom-value').html(zoom);
+  $('#slider-near-value').html(near);
+  $('#slider-far-value').html(far);
 }
 
 function updateRenderer() {
@@ -66,7 +73,18 @@ function modeChanged() {
 
 function modelChanged() {
   var d = document.getElementById("select_id2").value;
-  renderer.updateModel(d);
+
+  var zoom = $('#slider-zoom').slider("value");
+  var near = $('#slider-near').slider("value");
+  var far = $('#slider-far').slider("value");
+  renderer.updateModel(d,zoom,near,far);
+  $('#slider-zoom-value').html(zoom);
+  $('#slider-near-value').html(near);
+  $('#slider-far-value').html(far);
+
+  //renderer.updateModel('./plane.txt',zoom,near,far);
+  //renderer.updateModel('./hose.txt',zoom,near,far);
+  //renderer.updateModel('./teapot.txt',zoom,near,far);
   renderer.display();
 }
 
@@ -182,6 +200,21 @@ function lightChanged() {
 </tr>
 </table>
 
+<table>
+ <tr>
+  <td>Perspective:</td>
+ </tr>
+ <tr>
+  <td align='right' width="135px">Vertical Angle (Zoom) :</td><td id='slider-zoom-value' width='30px'>32</td><td width='150px'><div id='slider-zoom'/></td>
+ </tr>
+ <tr>
+  <td align='right'>Near Plane :</td><td id='slider-near-value'  width='30px'>0.5</td><td width='150px'><div id='slider-near'/></td>
+ </tr>
+ <tr>
+  <td align='right'>Far Plane :</td> <td id='slider-far-value'  width='30px'>4</td><td width='150px'><div id='slider-far'/></td>
+ </tr>
+</table>
+
 </td>
 <td>
 <h3>Vertex Shader</h3>
@@ -203,6 +236,9 @@ $('#slider-z').slider({value:-1, min:-10, max:10, step:0.1, slide:updateLight, c
 $('#direction-x').slider({value:1, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
 $('#direction-y').slider({value:1, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
 $('#direction-z').slider({value:-1, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
+$('#slider-zoom').slider({value:32, min:0, max:180, step:1, slide:updatePerspective, change:updatePerspective});
+$('#slider-near').slider({value:0.5, min:0, max:5, step:0.1, slide:updatePerspective, change:updatePerspective});
+$('#slider-far').slider({value:4, min:0, max:10, step:0.1, slide:updatePerspective, change:updatePerspective});
 
 function updateShininess(event, ui){
   renderer.shininess = ui.value;
@@ -239,6 +275,16 @@ function updateDirection(){
   $('#direction-x-value').html(x);
   $('#direction-y-value').html(y);
   $('#direction-z-value').html(z);
+}
+
+function updatePerspective(){
+  var zoom = $('#slider-zoom').slider("value");
+  var near = $('#slider-near').slider("value");
+  var far = $('#slider-far').slider("value");
+  renderer.updatePerspective(zoom,near,far);
+  $('#slider-zoom-value').html(zoom);
+  $('#slider-near-value').html(near);
+  $('#slider-far-value').html(far);
 }
 
 function updateClearColor(r,g,b){
