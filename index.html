@@ -431,22 +431,22 @@ uniform float Ka;   // Ambient reflection coefficient
 uniform float Kd;   // Diffuse reflection coefficient
 uniform float Ks;   // Specular reflection coefficient
 uniform float shininessVal; // Shininess
-uniform int lightType;
-uniform vec3 direction;
-uniform float angle;
-uniform float exponent;
 // Material color
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform vec3 lightPos; // Light position
+// New light attributes
+uniform int lightType;
+uniform vec3 direction;
 
 void main() {
   vec3 N = normalize(normalInterp);
   vec3 L;
+
   if(lightType == 0){
     L = normalize(lightPos - vertPos);
-  }else{
+  } else {
     L = normalize(-direction);
   }
   
@@ -490,6 +490,9 @@ uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform vec3 lightPos; // Light position
 varying vec4 color; //color
+// New light attributes
+uniform int lightType;
+uniform vec3 direction;
 
 void main(){
   vec4 vertPos4 = modelview * vec4(position, 1.0);
@@ -498,7 +501,14 @@ void main(){
   gl_Position = projection * vertPos4;
 
   vec3 N = normalize(normalInterp);
-  vec3 L = normalize(lightPos - vertPos);
+  vec3 L;
+
+  if(lightType == 0){
+    L = normalize(lightPos - vertPos);
+  } else {
+    L = normalize(-direction);
+  }
+
   // Lambert's cosine law
   float lambertian = max(dot(N, L), 0.0);
   float specular = 0.0;
@@ -559,7 +569,11 @@ uniform vec3 ambientColor; // the light's ambient color
 uniform vec3 diffuseColor; // the light's diffuse color
 uniform vec3 specularColor; // the light's specular color
 uniform vec3 lightPos; // the light's position
-        
+
+// New light attributes
+uniform int lightType;
+uniform vec3 direction;
+
 // material properties
 uniform float Ka; // the ambient reflectivity
 uniform float Kd; // the diffuse reflectivity
@@ -581,7 +595,14 @@ void main(void) {
             
     // diffuse term
     vec3 normal = normalize(normalInterp); 
-    vec3 light = normalize(lightPos - vertPos);
+    vec3 light;
+
+    if(lightType == 0){
+      light = normalize(lightPos - vertPos);
+    } else {
+      light = normalize(-direction);
+    }
+
     float lambert = max(0.0, dot(normal,light));
     float tone = floor(lambert * uTones);
     lambert = tone / uTones;
