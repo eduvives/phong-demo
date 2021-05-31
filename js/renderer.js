@@ -12,6 +12,11 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.specularColor = [1.0, 1.0, 1.0];
   this.clearColor = [0.0, 0.4, 0.7];
   this.attenuation = 0.01;
+  this.lightType = 0; // 0 equals puntual
+  this.direction = [0.5, 0.5, 0.5];
+  this.angle = 0.0;
+  this.exponent = 0.0;
+
   this.shininess = 80.0;
   this.kaVal = 1.0;
   this.kdVal = 1.0;
@@ -41,6 +46,10 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var kdLoc = 0;
   var ksLoc = 0;
   var attenuationLoc = 0;
+  var lightTypeLoc = 0; // 0 equals puntual
+  var directionLoc = [0.5, 0.5, 0.5];
+  var angleLoc = 0.0;
+  var exponentLoc = 0.0;
   var shininessLoc = 0;
   var lightPosLoc = 0;
   var lightVecLoc = 0;
@@ -194,6 +203,10 @@ function Renderer(canvasName, vertSrc, fragSrc)
     if(specularColorLoc != -1) gl.uniform3fv(specularColorLoc, this.specularColor);
     if(tonesLoc != -1) gl.uniform1f(tonesLoc, this.tones);
     if(specularTonesLoc != -1) gl.uniform1f(specularTonesLoc, this.specularTones);
+    if(lightTypeLoc != -1) gl.uniform1i(lightTypeLoc, this.lightType);
+    if(directionLoc != -1) gl.uniform3fv(directionLoc, this.direction);
+    if(angleLoc != -1) gl.uniform1f(angleLoc, this.angle);
+    if(exponentLoc != -1) gl.uniform1f(exponentLoc, this.exponent);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, bufID);
     gl.drawArrays(gl.TRIANGLES, 0, sceneVertNo);
@@ -265,6 +278,10 @@ function Renderer(canvasName, vertSrc, fragSrc)
     ksLoc = gl.getUniformLocation(progID, "Ks");
     tonesLoc = gl.getUniformLocation(progID, "uTones");
     specularTonesLoc = gl.getUniformLocation(progID, "uSpecularTones");
+    lightTypeLoc = gl.getUniformLocation(progID, "lightType");
+    directionLoc = gl.getUniformLocation(progID, "direction");
+    angleLoc = gl.getUniformLocation(progID, "angle");
+    exponentLoc = gl.getUniformLocation(progID, "exponent");
   }
 
   // the following functions are some matrix and vector helpers

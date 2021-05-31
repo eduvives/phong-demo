@@ -324,6 +324,10 @@ uniform float Ka;   // Ambient reflection coefficient
 uniform float Kd;   // Diffuse reflection coefficient
 uniform float Ks;   // Specular reflection coefficient
 uniform float shininessVal; // Shininess
+uniform int lightType;
+uniform vec3 direction;
+uniform float angle;
+uniform float exponent;
 // Material color
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
@@ -332,8 +336,13 @@ uniform vec3 lightPos; // Light position
 
 void main() {
   vec3 N = normalize(normalInterp);
-  vec3 L = normalize(lightPos - vertPos);
-
+  vec3 L;
+  if(lightType == 0){
+    L = normalize(lightPos - vertPos);
+  }else{
+    L = normalize(-direction);
+  }
+  
   // Lambert's cosine law
   float lambertian = max(dot(N, L), 0.0);
   float specular = 0.0;
