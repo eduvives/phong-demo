@@ -52,6 +52,33 @@ function showNumColorSelect(){
   } 
 }
 
+function showDirectionSelect(){
+  var d = document.getElementById("select_light_id").value;
+  if(d==2){
+    var x = document.getElementsByClassName("light");
+    var i;
+    for (i = 0; i < x.length; i++) {
+        x[i].style.display = 'none';
+    }
+    var x = document.getElementsByClassName("direction");
+    var i;
+    for (i = 0; i < x.length; i++) {
+        x[i].style.display = 'table-cell';
+    }
+  }else{
+    var x = document.getElementsByClassName("direction");
+    var i;
+    for (i = 0; i < x.length; i++) {
+        x[i].style.display = 'none';
+    }
+    var x = document.getElementsByClassName("light");
+    var i;
+    for (i = 0; i < x.length; i++) {
+        x[i].style.display = 'table-cell';
+    }
+  } 
+}
+
 var interval = setInterval(timerFunc, 40);
 
 function timerFunc() {
@@ -113,7 +140,8 @@ function exampleChanged() {
 
 function lightChanged() {
   var d = parseInt(document.getElementById("select_light_id").value) - 1;
-  renderer.setLightType(d);
+  renderer.lightType = d;
+  showDirectionSelect();
 }
 
 </script>
@@ -160,44 +188,27 @@ function lightChanged() {
   <td align='right'>Ambient reflection (ka):</td><td id='slider-ka-value' width='30px'>1.0</td><td><div id='slider-ka'/></td>
   <td align='right'>Ambient color:</td><td colspan='2'><div id='colorSelectorAmbient' class='colorSelector'><div style='background-color:rgb(52,26,0)'></div></div></td>
   <td colspan="2">&nbsp;</td>
-  <td>Light position:</td>
+  <td class='light'>Light position:</td>
+  <td class='direction'>Direction:</td>
  </tr>
  <tr>
   <td align='right'>Diffuse reflection (kd):</td><td id='slider-kd-value'  width='30px'>1.0</td><td><div id='slider-kd'/></td>
   <td align='right'>Diffuse Color:</td><td colspan='2'><div id='colorSelectorDiffuse' class='colorSelector'><div style='background-color:rgb(204,102,0)'></div></div></td>
-  <td align='right' width="30px">X:</td><td id='slider-x-value' width='30px' align='center'>1</td><td width='150px'><div id='slider-x'/></td>
+  <td class='light' align='right' width="30px">X:</td><td class='light' id='slider-x-value' width='30px' align='center'>1</td><td class='light' width='150px'><div id='slider-x'/></td>
+  <td class='direction' align='right' width="30px">X:</td><td class='direction' id='direction-x-value' width='30px' align='center'>0.4</td><td class='direction' width='150px'><div id='direction-x'/></td>
  </tr>
  <tr>
   <td align='right'>Specular reflection (ks):</td><td id='slider-ks-value'  width='30px'>1.0</td><td><div id='slider-ks'/></td>
   <td align='right'>Specular Color:</td><td colspan='2'><div id='colorSelectorSpecular' class='colorSelector'><div style='background-color:rgb(256,256,256)'></div></div></td>
-  <td align='right'>Y:</td><td id='slider-y-value'  width='30px' align='center'>1</td><td width='150px'><div id='slider-y'/></td>
+  <td class='light' align='right'>Y:</td><td class='light' id='slider-y-value'  width='30px' align='center'>1</td><td class='light' width='150px'><div id='slider-y'/></td>
+  <td class='direction' align='right'>Y:</td><td class='direction' id='direction-y-value' width='30px' align='center'>0.3</td><td class='direction' width='150px'><div id='direction-y'/></td>
  </tr>
  <tr>
   <td align='right'>Shininess:</td><td id='slider-s-value' width='30px'>80</td><td width='150px'><div id='slider-s'/></td>
   <td>&nbsp;Background Color:</td><td colspan='2'><div id='colorSelectorBg' class='colorSelector'><div style='background-color:rgb(0,102,179)'></div></div></td>
-  <td align='right'>Z:</td> <td id='slider-z-value'  width='30px' align='center'>-1</td><td width='150px'><div id='slider-z'/></td>
+  <td class='light' align='right'>Z:</td> <td class='light' id='slider-z-value'  width='30px' align='center'>-1</td><td class='light' width='150px'><div id='slider-z'/></td>
+  <td class='direction' align='right' >Z:</td> <td class='direction' id='direction-z-value'  width='30px' align='center'>0.6</td><td class='direction' width='150px'><div id='direction-z'/></td>
  </tr>
- <tr>
-   <td></td><td></td><td></td>
-   <td></td><td></td><td></td>
-   <td colspan="2">&nbsp;</td>
-   <td>Direction:</td>
- </tr>
- <tr>
-  <td></td><td></td><td></td>
-  <td></td><td></td><td></td>
-   <td align='right' width="30px">X:</td><td id='direction-x-value' width='30px' align='center'>1</td><td width='150px'><div id='direction-x'/></td>
-</tr>
-<tr>
-  <td></td><td></td><td></td>
-  <td></td><td></td><td></td>
-  <td align='right'>Y:</td><td id='direction-y-value'  width='30px' align='center'>1</td><td width='150px'><div id='direction-y'/></td>
-</tr>
-<tr>
-  <td></td><td></td><td></td>
-  <td></td><td></td><td></td>
-  <td align='right'>Z:</td> <td id='direction-z-value'  width='30px' align='center'>-1</td><td width='150px'><div id='direction-z'/></td>
-</tr>
 </table>
 
 <table>
@@ -233,12 +244,17 @@ $('#slider-ks').slider({value:1, max:1, step:0.01, range:"min", slide:updateLigh
 $('#slider-x').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
 $('#slider-y').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
 $('#slider-z').slider({value:-1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#direction-x').slider({value:1, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
-$('#direction-y').slider({value:1, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
-$('#direction-z').slider({value:-1, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
+$('#direction-x').slider({value:0.4, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
+$('#direction-y').slider({value:0.3, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
+$('#direction-z').slider({value:0.6, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
 $('#slider-zoom').slider({value:32, min:0, max:180, step:1, slide:updatePerspective, change:updatePerspective});
 $('#slider-near').slider({value:0.5, min:0, max:5, step:0.1, slide:updatePerspective, change:updatePerspective});
 $('#slider-far').slider({value:4, min:0, max:10, step:0.1, slide:updatePerspective, change:updatePerspective});
+
+// Mostrar los valores actuales en las etiquetas de los Sliders
+updateLight();
+updateDirection();
+lightChanged();
 
 function updateShininess(event, ui){
   renderer.shininess = ui.value;
