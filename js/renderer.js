@@ -21,6 +21,11 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.ksVal = 1.0;
   this.tones = 4.0;
   this.specularTones = 2.0;
+  this.texCoord = [
+    0.0, 0.0,  // lower-left corner  
+    1.0, 0.0,  // lower-right corner
+    0.5, 1.0   // top-center corner
+  ];
 
   // private members (inside closure)
   var canvasName = canvasName;
@@ -176,7 +181,7 @@ function Renderer(canvasName, vertSrc, fragSrc)
       // texCoord
       offset = 0 + 3*Float32Array.BYTES_PER_ELEMENT;
       gl.vertexAttribPointer(texCoordLoc, 2, gl.FLOAT, false, stride, offset);
-       gl.enableVertexAttribArray(texCoordLoc);
+      gl.enableVertexAttribArray(texCoordLoc);
     }
     if(normalLoc != -1) {
       // normal
@@ -265,6 +270,7 @@ function Renderer(canvasName, vertSrc, fragSrc)
     if(lightTypeLoc != -1) gl.uniform1i(lightTypeLoc, this.lightType);
     if(angleLoc != -1) gl.uniform1f(angleLoc, this.angle);
     if(exponentLoc != -1) gl.uniform1f(exponentLoc, this.exponent);
+
 
     gl.bindBuffer(gl.ARRAY_BUFFER, bufID);
     gl.drawArrays(gl.TRIANGLES, 0, sceneVertNo);
@@ -499,5 +505,81 @@ function Renderer(canvasName, vertSrc, fragSrc)
     for (var i = 0; i < 16; i++) inverse[i] = inv[i] * det;
     return true;
   }
+
+
+// Initialize a texture and load an image.
+// When the image finished loading copy it into the texture.
+//
+this.loadTexture = function (url) 
+{
+  url = "./imgs/pruebaText.jpg"
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Because images have to be downloaded over the internet
+  // they might take a moment until they are ready.
+  // Until then put a single pixel in the texture so we can
+  // use it immediately. When the image has finished downloading
+  // we'll update the texture with the contents of the image.
+  const level = 0;
+  const internalFormat = gl.RGBA;
+  const width = 1;
+  const height = 1;
+  const border = 0;
+  const srcFormat = gl.RGBA;
+  const srcType = gl.UNSIGNED_BYTE;
+  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType,
+                pixel);
+
+  const image = new Image();
+  image.onload = function() {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                  srcFormat, srcType, image);
+
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+       // Yes, it's a power of 2. Generate mips.
+       gl.generateMipmap(gl.TEXTURE_2D);
+       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    } else {
+       // No, it's not a power of 2. Turn off mips and set
+       // wrapping to clamp to edge
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    }
+  };
+  image.src = url;
+
+  return texture;
+}
+
+function isPowerOf2(value) {
+  return (value & (value - 1)) == 0;
+}
+  /*this.loadTexture = function (url)
+  {
+    const texture = gl.createTexture();
+    const image = new Image();
+
+    image.onload = e => {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);    
+      gl.generateMipmap(gl.TEXTURE_2D);
+    };
+
+    url = "./imgs/pruebaText.jpg"
+    image.src = url;    
+    console.log(url)
+
+    return texture;
+  }*/
 }
 
