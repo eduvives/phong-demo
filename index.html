@@ -16,8 +16,7 @@
 var renderer = 0;
 
 function run() {
-  var id = document.getElementById("select_example_id").value;
-  $("#select_num_colors").hide();
+
   //var vertSrc = document.getElementById("code_vert").text;
   var vertSrc = document.getElementById("GouraudVert").value;
   var fragSrc = document.getElementById("GouraudFrag").value;
@@ -26,6 +25,19 @@ function run() {
   document.getElementById("code_vert").value = vertSrc;
   renderer = new Renderer("myWebGLCanvas", vertSrc, fragSrc);
 
+  var id = document.getElementById("select_example_id").value;
+  $("#select_num_colors").hide();
+  
+  renderer.initLightsPos();
+  renderer.initLightsDir();
+
+  // Mostrar los valores actuales en las etiquetas de los Sliders
+  selectedLightChanged();
+  lightChanged();
+  numLightsChanged();
+  updateDirection();
+  updateLight();
+  
   var zoom = $('#slider-zoom').slider("value");
   var near = $('#slider-near').slider("value");
   var far = $('#slider-far').slider("value");
@@ -50,6 +62,46 @@ function showNumColorSelect(){
   }else{
     $("#select_num_colors").hide();
   } 
+}
+
+function showLightSelect(){
+  var d = document.getElementById("select_num_lights").value;
+  if(d==-1){
+
+  }
+  else if(d==0){
+    document.getElementById("select_light").value = -1;
+    $("#select_light option[value=0]").attr("disabled",true);
+    $("#select_light option[value=1]").attr("disabled",true);
+    $("#select_light option[value=2]").attr("disabled",true);
+    selectedLightChanged();
+  }else if (d==1){
+    if(document.getElementById("select_light").value!=0){
+      document.getElementById("select_light").value = 0;
+      selectedLightChanged();
+    }
+    $("#select_light option[value=0]").attr("disabled",false);
+    $("#select_light option[value=1]").attr("disabled",true);
+    $("#select_light option[value=2]").attr("disabled",true);
+  } else if (d==2) {
+    var d = document.getElementById("select_light").value;
+    if (d!=0 && d!=1){
+      document.getElementById("select_light").value = 0;
+      selectedLightChanged();
+    }
+    $("#select_light option[value=0]").attr("disabled",false);
+    $("#select_light option[value=1]").attr("disabled",false);
+    $("#select_light option[value=2]").attr("disabled",true);
+  } else if (d==3) {
+    var d = document.getElementById("select_light").value;
+    if (d==-1){
+      document.getElementById("select_light").value = 0;
+      selectedLightChanged();
+    }
+    $("#select_light option[value=0]").attr("disabled",false);
+    $("#select_light option[value=1]").attr("disabled",false);
+    $("#select_light option[value=2]").attr("disabled",false);
+  }
 }
 
 function showDirectionSelect(){
@@ -88,7 +140,7 @@ function timerFunc() {
 }
 
 function numColorsChanged() {
-  var d = parseFloat(document.getElementById("select_num_colors").value);
+  var d = parseInt(document.getElementById("select_num_colors").value);
   renderer.tones = d;
   renderer.specularTones = d / 2;
 }
@@ -144,7 +196,85 @@ function lightChanged() {
   showDirectionSelect();
 }
 
+function numLightsChanged() {
+  var value = parseInt(document.getElementById("select_num_lights").value);
+  renderer.lightsNum = value;
+  if (value != 0){
+    $('#slider-x').slider({ disabled: false });
+    $('#slider-y').slider({ disabled: false });
+    $('#slider-z').slider({ disabled: false });
+    $('#direction-x').slider({ disabled: false });
+    $('#direction-y').slider({ disabled: false });
+    $('#direction-z').slider({ disabled: false });
+  }else{
+    $('#slider-x').slider({ disabled: true });
+    $('#slider-y').slider({ disabled: true });
+    $('#slider-z').slider({ disabled: true });
+    $('#direction-x').slider({ disabled: true });
+    $('#direction-y').slider({ disabled: true });
+    $('#direction-z').slider({ disabled: true });
+  }
+  showLightSelect();
+}
+
+function selectedLightChanged() {
+  var d = parseInt(document.getElementById("select_light").value);
+
+  var lightsPos = renderer.getLightsPos();
+  var lightsDir = renderer.getLightsDir();
+
+  updateNewLight(d, lightsPos);
+  updateNewDirection(d, lightsDir);
+
+  renderer.selectedLight = d;
+
+}
+
+function updateNewLight(d, lightsPos){
+  if (d!=-1){
+    var index = d * 3;
+    $('#slider-x').slider("value", lightsPos[index]);
+    $('#slider-y').slider("value", lightsPos[index + 1]);
+    $('#slider-z').slider("value", lightsPos[index + 2]);
+    $('#slider-x-value').html(roundOneDecimal(lightsPos[index]));
+    $('#slider-y-value').html(roundOneDecimal(lightsPos[index + 1]));
+    $('#slider-z-value').html(roundOneDecimal(lightsPos[index + 2]));
+    updateLight();
+  }
+}
+
+function updateNewDirection(d, lightsDir){
+  if (d!=-1){
+    var index = d * 3;
+    $('#direction-x').slider("value", lightsDir[index]);
+    $('#direction-y').slider("value", lightsDir[index + 1]);
+    $('#direction-z').slider("value", lightsDir[index + 2]);
+    $('#direction-x-value').html(roundTwoDecimals(lightsDir[index]));
+    $('#direction-y-value').html(roundTwoDecimals(lightsDir[index + 1]));
+    $('#direction-z-value').html(roundTwoDecimals(lightsDir[index + 2]));
+    updateDirection();
+  }
+}
+
+function roundOneDecimal (num){
+  return Math.round(num * 10) / 10;
+}
+
+function roundTwoDecimals (num){
+  return Math.round(num * 100) / 100;
+}
+
 </script>
+
+<style>
+.spaceUnder {
+  padding-bottom: 2em;
+}
+.spaceAbove {
+  padding-top: 2em;
+}
+</style>
+
 </head>
 <body onload="run();">
 <p id="code_vert_error" ></p>
@@ -179,11 +309,10 @@ function lightChanged() {
 <select onchange="lightChanged()" id="select_light_id">
   <option value="1">Puntual</option>
   <option value="2">Directional</option>
-  <option value="3">Spotlight</option>
 </select>
 <button onclick="updateRenderer()">Reload Shader Code</button>
 
-<table>
+<table class="spaceUnder spaceAbove">
  <tr>
   <td align='right'>Ambient reflection (ka):</td><td id='slider-ka-value' width='30px'>1.0</td><td><div id='slider-ka'/></td>
   <td align='right'>Ambient color:</td><td colspan='2'><div id='colorSelectorAmbient' class='colorSelector'><div style='background-color:rgb(52,26,0)'></div></div></td>
@@ -211,7 +340,7 @@ function lightChanged() {
  </tr>
 </table>
 
-<table>
+<table class="spaceUnder">
  <tr>
   <td>Perspective:</td>
  </tr>
@@ -225,6 +354,20 @@ function lightChanged() {
   <td align='right'>Far Plane :</td> <td id='slider-far-value'  width='30px'>4</td><td width='150px'><div id='slider-far'/></td>
  </tr>
 </table>
+
+<select onchange="numLightsChanged()" id="select_num_lights">
+  <option value="0">none lights</option>
+  <option selected value="1">1 light</option>
+  <option value="2">2 lights</option>
+  <option value="3">3 lights</option>
+</select>
+
+<select onchange="selectedLightChanged()" id="select_light">
+  <option disabled value="-1"> -- none selected -- </option>
+  <option selected value="0">first light</option>
+  <option value="1">second light</option>
+  <option value="2">third light</option>
+</select>
 
 </td>
 <td>
@@ -241,20 +384,15 @@ $('#slider-s').slider({value:80, min:1, max:128, step:1, range:"min", slide:upda
 $('#slider-ka').slider({value:1, max:1, step:0.01, range:"min", slide:updateLightAmbientTerm});
 $('#slider-kd').slider({value:1, max:1, step:0.01, range:"min", slide:updateLightDiffuseTerm});
 $('#slider-ks').slider({value:1, max:1, step:0.01, range:"min", slide:updateLightSpecularTerm});
-$('#slider-x').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#slider-y').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#slider-z').slider({value:-1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#direction-x').slider({value:0.4, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
-$('#direction-y').slider({value:0.3, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
-$('#direction-z').slider({value:0.6, min:0, max:1, step:0.01, slide:updateDirection, change:updateDirection});
+$('#slider-x').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight});
+$('#slider-y').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight});
+$('#slider-z').slider({value:-1, min:-10, max:10, step:0.1, slide:updateLight});
+$('#direction-x').slider({value:0.4, min:-1, max:1, step:0.01, slide:updateDirection});
+$('#direction-y').slider({value:0.3, min:-1, max:1, step:0.01, slide:updateDirection});
+$('#direction-z').slider({value:0.6, min:-1, max:1, step:0.01, slide:updateDirection});
 $('#slider-zoom').slider({value:32, min:0, max:180, step:1, slide:updatePerspective, change:updatePerspective});
 $('#slider-near').slider({value:0.5, min:0, max:5, step:0.1, slide:updatePerspective, change:updatePerspective});
 $('#slider-far').slider({value:4, min:0, max:10, step:0.1, slide:updatePerspective, change:updatePerspective});
-
-// Mostrar los valores actuales en las etiquetas de los Sliders
-updateLight();
-updateDirection();
-lightChanged();
 
 function updateShininess(event, ui){
   renderer.shininess = ui.value;
@@ -277,17 +415,22 @@ function updateLight(){
   var x = $('#slider-x').slider("value");
   var y = $('#slider-y').slider("value");
   var z = $('#slider-z').slider("value");
-  renderer.lightPos = [x,y,z];
-  $('#slider-x-value').html(x);
-  $('#slider-y-value').html(y);
-  $('#slider-z-value').html(z);
+  var value = parseInt(document.getElementById("select_light").value);
+  if (value!=-1){
+    var index = value * 3;
+    renderer.updateLightPos(index,x,y,z);
+    $('#slider-x-value').html(x);
+    $('#slider-y-value').html(y);
+    $('#slider-z-value').html(z);
+  }
 }
 
 function updateDirection(){
   var x = $('#direction-x').slider("value");
   var y = $('#direction-y').slider("value");
   var z = $('#direction-z').slider("value");
-  renderer.direction = [x,y,z];
+  var index = parseInt(document.getElementById("select_light").value) * 3;
+  renderer.updateLightDir(index,x,y,z);
   $('#direction-x-value').html(x);
   $('#direction-y-value').html(y);
   $('#direction-z-value').html(z);
@@ -435,41 +578,57 @@ uniform float shininessVal; // Shininess
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
-uniform vec3 lightPos; // Light position
 // New light attributes
+uniform int lightsNum;
+uniform int actualLight;
 uniform int lightType;
-uniform vec3 direction;
+uniform mat3 lightsDir;
+uniform mat3 lightsPos; // Lights position
 
 void main() {
   vec3 N = normalize(normalInterp);
   vec3 L;
 
-  if(lightType == 0){
-    L = normalize(lightPos - vertPos);
-  } else {
-    L = normalize(-direction);
-  }
+  // Init variables
+  vec3 ambient_total = vec3(0);
+  vec3 diffuse_total = vec3(0);
+  vec3 specular_total = vec3(0);
+
+  const int MAX_ITERATIONS = 100;
+
+  for (int i = 0; i < MAX_ITERATIONS; i++){
+    if (i >= lightsNum){break;}
+    if(lightType == 0){
+      L = normalize(vec3(lightsPos[i][0],lightsPos[i][1],lightsPos[i][2]) - vertPos);
+    } else {
+      L = normalize(-vec3(lightsDir[i][0],lightsDir[i][1],lightsDir[i][2]));
+    }
   
-  // Lambert's cosine law
-  float lambertian = max(dot(N, L), 0.0);
-  float specular = 0.0;
-  if(lambertian > 0.0) {
-    vec3 R = reflect(-L, N);      // Reflected light vector
-    vec3 V = normalize(-vertPos); // Vector to viewer
-    // Compute the specular term
-    float specAngle = max(dot(R, V), 0.0);
-    specular = pow(specAngle, shininessVal);
+    // Lambert's cosine law
+    float lambertian = max(dot(N, L), 0.0);
+    float specular = 0.0;
+    if(lambertian > 0.0) {
+      vec3 R = reflect(-L, N);      // Reflected light vector
+      vec3 V = normalize(-vertPos); // Vector to viewer
+      // Compute the specular term
+      float specAngle = max(dot(R, V), 0.0);
+      specular = pow(specAngle, shininessVal);
+    }
+    diffuse_total += Kd * lambertian * diffuseColor;
+    specular_total += Ks * specular * specularColor;
+    ambient_total += Ka * ambientColor;
   }
-  gl_FragColor = vec4(Ka * ambientColor +
-                      Kd * lambertian * diffuseColor +
-                      Ks * specular * specularColor, 1.0);
+
+  gl_FragColor = vec4(ambient_total +
+                      diffuse_total +
+                      specular_total, 1.0);
 
   // only ambient
-  if(mode == 2) gl_FragColor = vec4(Ka * ambientColor, 1.0);
+  if(mode == 2) gl_FragColor = vec4(ambient_total, 1.0);
   // only diffuse
-  if(mode == 3) gl_FragColor = vec4(Kd * lambertian * diffuseColor, 1.0);
+  if(mode == 3) gl_FragColor = vec4(diffuse_total, 1.0);
   // only specular
-  if(mode == 4) gl_FragColor = vec4(Ks * specular * specularColor, 1.0);
+  if(mode == 4) gl_FragColor = vec4(specular_total, 1.0);
 }
 </textarea>
 
@@ -488,11 +647,13 @@ uniform float shininessVal; // Shininess
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
-uniform vec3 lightPos; // Light position
 varying vec4 color; //color
 // New light attributes
+uniform int lightsNum;
+uniform int actualLight;
 uniform int lightType;
-uniform vec3 direction;
+uniform mat3 lightsDir;
+uniform mat3 lightsPos; // Lights position
 
 void main(){
   vec4 vertPos4 = modelview * vec4(position, 1.0);
@@ -503,32 +664,46 @@ void main(){
   vec3 N = normalize(normalInterp);
   vec3 L;
 
-  if(lightType == 0){
-    L = normalize(lightPos - vertPos);
-  } else {
-    L = normalize(-direction);
+  // Init variables
+  vec3 ambient_total = vec3(0);
+  vec3 diffuse_total = vec3(0);
+  vec3 specular_total = vec3(0);
+
+  const int MAX_ITERATIONS = 100;
+
+  for (int i = 0; i < MAX_ITERATIONS; i++){
+    if (i >= lightsNum){break;}
+    if(lightType == 0){
+      L = normalize(vec3(lightsPos[i][0],lightsPos[i][1],lightsPos[i][2]) - vertPos);
+    } else {
+      L = normalize(-vec3(lightsDir[i][0],lightsDir[i][1],lightsDir[i][2]));
+    }
+  
+    // Lambert's cosine law
+    float lambertian = max(dot(N, L), 0.0);
+    float specular = 0.0;
+    if(lambertian > 0.0) {
+      vec3 R = reflect(-L, N);      // Reflected light vector
+      vec3 V = normalize(-vertPos); // Vector to viewer
+      // Compute the specular term
+      float specAngle = max(dot(R, V), 0.0);
+      specular = pow(specAngle, shininessVal);
+    }
+    diffuse_total += Kd * lambertian * diffuseColor;
+    specular_total += Ks * specular * specularColor;
+    ambient_total += Ka * ambientColor;
   }
 
-  // Lambert's cosine law
-  float lambertian = max(dot(N, L), 0.0);
-  float specular = 0.0;
-  if(lambertian > 0.0) {
-    vec3 R = reflect(-L, N);      // Reflected light vector
-    vec3 V = normalize(-vertPos); // Vector to viewer
-    // Compute the specular term
-    float specAngle = max(dot(R, V), 0.0);
-    specular = pow(specAngle, shininessVal);
-  }
-  color = vec4(Ka * ambientColor +
-               Kd * lambertian * diffuseColor +
-               Ks * specular * specularColor, 1.0);
+  color = vec4(ambient_total +
+               diffuse_total +
+               specular_total, 1.0);
 
   // only ambient
-  if(mode == 2) color = vec4(Ka * ambientColor, 1.0);
+  if(mode == 2) color = vec4(ambient_total, 1.0);
   // only diffuse
-  if(mode == 3) color = vec4(Kd * lambertian * diffuseColor, 1.0);
+  if(mode == 3) color = vec4(diffuse_total, 1.0);
   // only specular
-  if(mode == 4) color = vec4(Ks * specular * specularColor, 1.0);
+  if(mode == 4) color = vec4(specular_total, 1.0);
 }
 </textarea>
 
@@ -568,11 +743,13 @@ precision mediump float; // set float to medium precision
 uniform vec3 ambientColor; // the light's ambient color
 uniform vec3 diffuseColor; // the light's diffuse color
 uniform vec3 specularColor; // the light's specular color
-uniform vec3 lightPos; // the light's position
 
 // New light attributes
+uniform int lightsNum;
+uniform int actualLight;
 uniform int lightType;
-uniform vec3 direction;
+uniform mat3 lightsDir;
+uniform mat3 lightsPos; // Lights position
 
 // material properties
 uniform float Ka; // the ambient reflectivity
@@ -589,20 +766,29 @@ varying vec3 normalInterp; // normal of fragment - Surface normal
 uniform int mode;   // Rendering mode
 
 void main(void) {
-        
+  
+  // Init variables
+  vec3 ambient_total = vec3(0);
+  vec3 diffuse_total = vec3(0);
+  vec3 specular_total = vec3(0);
+
+  const int MAX_ITERATIONS = 100;
+
+  for (int i = 0; i < MAX_ITERATIONS; i++){
+    if (i >= lightsNum){break;}
     // ambient term
     vec3 ambient = Ka * ambientColor; 
             
     // diffuse term
     vec3 normal = normalize(normalInterp); 
     vec3 light;
-
+  
     if(lightType == 0){
-      light = normalize(lightPos - vertPos);
+      light = normalize(vec3(lightsPos[i][0],lightsPos[i][1],lightsPos[i][2]) - vertPos);
     } else {
-      light = normalize(-direction);
+      light = normalize(-vec3(lightsDir[i][0],lightsDir[i][1],lightsDir[i][2]));
     }
-
+  
     float lambert = max(0.0, dot(normal,light));
     float tone = floor(lambert * uTones);
     lambert = tone / uTones;
@@ -615,18 +801,23 @@ void main(void) {
     tone = floor(highlight * uSpecularTones);
     highlight = tone / uSpecularTones;
     vec3 specular = Ks * specularColor * highlight; // specular term
-            
-    // combine to find lit color
-    vec3 litColor = ambient + diffuse + specular;
     
-    gl_FragColor = vec4(litColor, 1.0);
-    
-    // only ambient
-    if(mode == 2) gl_FragColor = vec4(ambient, 1.0);
-    // only diffuse
-    if(mode == 3) gl_FragColor = vec4(diffuse, 1.0);
-    // only specular
-    if(mode == 4) gl_FragColor = vec4(specular, 1.0);
+    diffuse_total += diffuse;
+    specular_total += specular;
+    ambient_total += ambient;
+  }
+          
+  // combine to find lit color
+  vec3 litColor = ambient_total + diffuse_total + specular_total;
+  
+  gl_FragColor = vec4(litColor, 1.0);
+  
+  // only ambient
+  if(mode == 2) gl_FragColor = vec4(ambient_total, 1.0);
+  // only diffuse
+  if(mode == 3) gl_FragColor = vec4(diffuse_total, 1.0);
+  // only specular
+  if(mode == 4) gl_FragColor = vec4(specular_total, 1.0);
 } // end main
 </textarea>
 
