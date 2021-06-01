@@ -49,6 +49,9 @@ function run() {
   $('#slider-zoom-value').html(zoom);
   $('#slider-near-value').html(near);
   $('#slider-far-value').html(far);
+
+  /* Texture */
+  renderer.loadTexture("vacio");
 }
 
 function updateRenderer() {
@@ -169,10 +172,6 @@ function modelChanged() {
   //renderer.updateModel('./hose.txt',zoom,near,far);
   //renderer.updateModel('./teapot.txt',zoom,near,far);
   renderer.display();
-
-
-  /* Texture */
-  renderer.loadTexture("vacio");
 }
 
 function exampleChanged() {
@@ -599,10 +598,14 @@ uniform float shininessVal; // Shininess
 uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
-uniform vec3 lightPos; // Light position
+
 // New light attributes
+uniform int lightsNum;
+uniform int actualLight;
 uniform int lightType;
-uniform vec3 direction;
+uniform mat3 lightsDir;
+uniform mat3 lightsPos; // Lights position
+
 uniform sampler2D texture;
 varying vec2 vUv;
 
@@ -611,32 +614,46 @@ void main() {
   vec3 N = normalize(normalInterp);
   vec3 L;
 
-  if(lightType == 0){
-    L = normalize(lightPos - vertPos);
-  } else {
-    L = normalize(-direction);
+  // Init variables
+  vec3 ambient_total = vec3(0);
+  vec3 diffuse_total = vec3(0);
+  vec3 specular_total = vec3(0);
+
+  const int MAX_ITERATIONS = 100;
+
+  for (int i = 0; i < MAX_ITERATIONS; i++){
+    if (i >= lightsNum){break;}
+    if(lightType == 0){
+      L = normalize(vec3(lightsPos[i][0],lightsPos[i][1],lightsPos[i][2]) - vertPos);
+    } else {
+      L = normalize(-vec3(lightsDir[i][0],lightsDir[i][1],lightsDir[i][2]));
+    }
+    
+    // Lambert's cosine law
+    float lambertian = max(dot(N, L), 0.0);
+    float specular = 0.0;
+    if(lambertian > 0.0) {
+      vec3 R = reflect(-L, N);      // Reflected light vector
+      vec3 V = normalize(-vertPos); // Vector to viewer
+      // Compute the specular term
+      float specAngle = max(dot(R, V), 0.0);
+      specular = pow(specAngle, shininessVal);
+    }
+    diffuse_total += Kd * lambertian * (diffuseColor * 0.25 + texturaYa * 0.75);
+    specular_total += Ks * specular * specularColor;
+    ambient_total += Ka * ambientColor;
   }
-  
-  // Lambert's cosine law
-  float lambertian = max(dot(N, L), 0.0);
-  float specular = 0.0;
-  if(lambertian > 0.0) {
-    vec3 R = reflect(-L, N);      // Reflected light vector
-    vec3 V = normalize(-vertPos); // Vector to viewer
-    // Compute the specular term
-    float specAngle = max(dot(R, V), 0.0);
-    specular = pow(specAngle, shininessVal);
-  }
-  gl_FragColor = vec4(Ka * ambientColor +
-                      Kd * lambertian * (texturaYa) +
-                      Ks * specular * specularColor, 1.0);
+
+  gl_FragColor = vec4(ambient_total +
+                      diffuse_total +
+                      specular_total, 1.0);
 
   // only ambient
-  if(mode == 2) gl_FragColor = vec4(Ka * ambientColor, 1.0);
+  if(mode == 2) gl_FragColor = vec4(vec3(ambient_total * 0.75 + texturaYa * 0.25), 1.0);
   // only diffuse
-  if(mode == 3) gl_FragColor = vec4(Kd * lambertian * diffuseColor, 1.0);
+  if(mode == 3) gl_FragColor = vec4(diffuse_total, 1.0);
   // only specular
-  if(mode == 4) gl_FragColor = vec4(Ks * specular * specularColor, 1.0);
+  if(mode == 4) gl_FragColor = vec4(vec3(specular_total * 0.75 + texturaYa * 0.25), 1.0);
   }
 </textarea>
 
