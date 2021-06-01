@@ -5,7 +5,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
   // public member
   this.t = 0.0;
   this.modeVal = 1;
-  this.lightPos = [1.0, 1.0, -1.0];
   this.lightVec = new Float32Array(3);
   this.ambientColor = [0.2, 0.1, 0.0];
   this.diffuseColor = [0.8, 0.4, 0.0];
@@ -13,7 +12,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.clearColor = [0.0, 0.4, 0.7];
   this.attenuation = 0.01;
   this.lightType = 0; // 0 equals puntual
-  this.direction = [0.4, 0.3, 0.6];
   this.angle = 0.0;
   this.exponent = 0.0;
 
@@ -23,6 +21,11 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.ksVal = 1.0;
   this.tones = 4.0;
   this.specularTones = 2.0;
+  this.texCoord = [
+    0.0, 0.0,  // lower-left corner  
+    1.0, 0.0,  // lower-right corner
+    0.5, 1.0   // top-center corner
+  ];
 
   // private members (inside closure)
   var canvasName = canvasName;
@@ -40,18 +43,20 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var normalLoc = 0;
   var projectionLoc = 0;
   var modelviewLoc = 0;
+  var lightsPositionLoc = 0;
+  var lightsDirectionLoc = 0;
   var normalMatrixLoc = 0;
   var modeLoc = 0;
   var kaLoc = 0;
   var kdLoc = 0;
   var ksLoc = 0;
   var attenuationLoc = 0;
+  var lightsNumLoc = 0;
+  var selectedLightLoc = 0;
   var lightTypeLoc = 0; // 0 equals puntual
-  var directionLoc = [0.5, 0.5, 0.5];
   var angleLoc = 0.0;
   var exponentLoc = 0.0;
   var shininessLoc = 0;
-  var lightPosLoc = 0;
   var lightVecLoc = 0;
   var ambientColorLoc = 0;
   var diffuseColorLoc = 0;
@@ -61,6 +66,62 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var projection = new Float32Array(16);
   var modelview = new Float32Array(16);
   var currentFileName = "./knot.txt";
+
+  // New lights attributes
+  this.lightsNum = 3;
+  this.selectedLight = 0;
+  var lightsPosition = new Float32Array(9);
+  var lightsDirection = new Float32Array(9);
+
+  // public
+  this.initLightsPos = function () {
+    lightsPosition[0] = 1;
+    lightsPosition[1] = 1;
+    lightsPosition[2] = -1;
+    lightsPosition[3] = 1;
+    lightsPosition[4] = 1;
+    lightsPosition[5] = -1;
+    lightsPosition[6] = 1;
+    lightsPosition[7] = 1;
+    lightsPosition[8] = -1;
+  }
+
+  // public
+  this.initLightsDir = function () {
+    lightsDirection[0] = 0.4;
+    lightsDirection[1] = 0.3;
+    lightsDirection[2] = 0.6;
+    lightsDirection[3] = 0.5;
+    lightsDirection[4] = 0.5;
+    lightsDirection[5] = 0.5;
+    lightsDirection[6] = 1;
+    lightsDirection[7] = 1;
+    lightsDirection[8] = -1;
+  }
+
+  // public
+  this.updateLightPos = function (index, x, y, z) {
+    lightsPosition[index] = x;
+    lightsPosition[index + 1] = y;
+    lightsPosition[index + 2] = z;
+  }
+
+  // public
+  this.updateLightDir = function (index, x, y, z) {
+    lightsDirection[index] = x;
+    lightsDirection[index + 1] = y;
+    lightsDirection[index + 2] = z;
+  }
+
+  // public
+  this.getLightsPos = function () {
+    return lightsPosition;
+  }
+
+  // public
+  this.getLightsDir = function () {
+    return lightsDirection;
+  }
 
   // public
   this.updateShader = function (newvertSrc, newfragSrc) {
@@ -120,7 +181,7 @@ function Renderer(canvasName, vertSrc, fragSrc)
       // texCoord
       offset = 0 + 3*Float32Array.BYTES_PER_ELEMENT;
       gl.vertexAttribPointer(texCoordLoc, 2, gl.FLOAT, false, stride, offset);
-       gl.enableVertexAttribArray(texCoordLoc);
+      gl.enableVertexAttribArray(texCoordLoc);
     }
     if(normalLoc != -1) {
       // normal
@@ -189,14 +250,17 @@ function Renderer(canvasName, vertSrc, fragSrc)
     // corresponding UNIFORM variables of the shader
     gl.uniformMatrix4fv(projectionLoc, false, projection);
     gl.uniformMatrix4fv(modelviewLoc, false, modelview);
-    if(normalMatrixLoc != -1)  gl.uniformMatrix4fv(normalMatrixLoc, false, normalmatrix);
+    gl.uniformMatrix3fv(lightsPositionLoc, false, lightsPosition);
+    gl.uniformMatrix3fv(lightsDirectionLoc, false, lightsDirection);
+    if(normalMatrixLoc != -1) gl.uniformMatrix4fv(normalMatrixLoc, false, normalmatrix);
     if(modeLoc != -1) gl.uniform1i(modeLoc, this.modeVal);
     if(kaLoc != -1) gl.uniform1f(kaLoc, this.kaVal);
     if(kdLoc != -1) gl.uniform1f(kdLoc, this.kdVal);
     if(ksLoc != -1) gl.uniform1f(ksLoc, this.ksVal);
     if(attenuationLoc != -1) gl.uniform1f(attenuationLoc, this.attenuation);
+    if(lightsNumLoc != -1) gl.uniform1i(lightsNumLoc, this.lightsNum);
+    if(selectedLightLoc != -1) gl.uniform1i(selectedLightLoc, this.selectedLight);
     if(shininessLoc != -1) gl.uniform1f(shininessLoc, this.shininess);
-    if(lightPosLoc != -1) gl.uniform3fv(lightPosLoc, this.lightPos);
     if(lightVecLoc != -1) gl.uniform3fv(lightVecLoc, this.lightVec);
     if(ambientColorLoc != -1) gl.uniform3fv(ambientColorLoc, this.ambientColor);
     if(diffuseColorLoc != -1) gl.uniform3fv(diffuseColorLoc, this.diffuseColor);
@@ -204,9 +268,9 @@ function Renderer(canvasName, vertSrc, fragSrc)
     if(tonesLoc != -1) gl.uniform1f(tonesLoc, this.tones);
     if(specularTonesLoc != -1) gl.uniform1f(specularTonesLoc, this.specularTones);
     if(lightTypeLoc != -1) gl.uniform1i(lightTypeLoc, this.lightType);
-    if(directionLoc != -1) gl.uniform3fv(directionLoc, this.direction);
     if(angleLoc != -1) gl.uniform1f(angleLoc, this.angle);
     if(exponentLoc != -1) gl.uniform1f(exponentLoc, this.exponent);
+
 
     gl.bindBuffer(gl.ARRAY_BUFFER, bufID);
     gl.drawArrays(gl.TRIANGLES, 0, sceneVertNo);
@@ -264,22 +328,24 @@ function Renderer(canvasName, vertSrc, fragSrc)
     // retrieve the location of the UNIFORM variables of the shader
     projectionLoc = gl.getUniformLocation(progID, "projection");
     modelviewLoc = gl.getUniformLocation(progID, "modelview");
+    lightsPositionLoc = gl.getUniformLocation(progID, "lightsPos");
+    lightsDirectionLoc = gl.getUniformLocation(progID, "lightsDir");
     normalMatrixLoc = gl.getUniformLocation(progID, "normalMat");
     modeLoc = gl.getUniformLocation(progID, "mode");
-    lightPosLoc = gl.getUniformLocation(progID, "lightPos");
     lightVecLoc = gl.getUniformLocation(progID, "lightVec");
     ambientColorLoc = gl.getUniformLocation(progID, "ambientColor");
     diffuseColorLoc = gl.getUniformLocation(progID, "diffuseColor");
     specularColorLoc = gl.getUniformLocation(progID, "specularColor");
     shininessLoc = gl.getUniformLocation(progID, "shininessVal");
     attenuationLoc = gl.getUniformLocation(progID, "attenuationVal");
+    lightsNumLoc = gl.getUniformLocation(progID, "lightsNum");
+    selectedLightLoc = gl.getUniformLocation(progID, "actualLight");
     kaLoc = gl.getUniformLocation(progID, "Ka");
     kdLoc = gl.getUniformLocation(progID, "Kd");
     ksLoc = gl.getUniformLocation(progID, "Ks");
     tonesLoc = gl.getUniformLocation(progID, "uTones");
     specularTonesLoc = gl.getUniformLocation(progID, "uSpecularTones");
     lightTypeLoc = gl.getUniformLocation(progID, "lightType");
-    directionLoc = gl.getUniformLocation(progID, "direction");
     angleLoc = gl.getUniformLocation(progID, "angle");
     exponentLoc = gl.getUniformLocation(progID, "exponent");
   }
@@ -439,5 +505,81 @@ function Renderer(canvasName, vertSrc, fragSrc)
     for (var i = 0; i < 16; i++) inverse[i] = inv[i] * det;
     return true;
   }
+
+
+// Initialize a texture and load an image.
+// When the image finished loading copy it into the texture.
+//
+this.loadTexture = function (url) 
+{
+  url = "./imgs/pruebaText.jpg"
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Because images have to be downloaded over the internet
+  // they might take a moment until they are ready.
+  // Until then put a single pixel in the texture so we can
+  // use it immediately. When the image has finished downloading
+  // we'll update the texture with the contents of the image.
+  const level = 0;
+  const internalFormat = gl.RGBA;
+  const width = 1;
+  const height = 1;
+  const border = 0;
+  const srcFormat = gl.RGBA;
+  const srcType = gl.UNSIGNED_BYTE;
+  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                width, height, border, srcFormat, srcType,
+                pixel);
+
+  const image = new Image();
+  image.onload = function() {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                  srcFormat, srcType, image);
+
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+       // Yes, it's a power of 2. Generate mips.
+       gl.generateMipmap(gl.TEXTURE_2D);
+       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    } else {
+       // No, it's not a power of 2. Turn off mips and set
+       // wrapping to clamp to edge
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    }
+  };
+  image.src = url;
+
+  return texture;
+}
+
+function isPowerOf2(value) {
+  return (value & (value - 1)) == 0;
+}
+  /*this.loadTexture = function (url)
+  {
+    const texture = gl.createTexture();
+    const image = new Image();
+
+    image.onload = e => {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);    
+      gl.generateMipmap(gl.TEXTURE_2D);
+    };
+
+    url = "./imgs/pruebaText.jpg"
+    image.src = url;    
+    console.log(url)
+
+    return texture;
+  }*/
 }
 
