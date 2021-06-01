@@ -28,18 +28,19 @@ function run() {
   var id = document.getElementById("select_example_id").value;
   $("#select_num_colors").hide();
   
+  renderer.initLightsPos();
+  renderer.initLightsDir();
+
   // Mostrar los valores actuales en las etiquetas de los Sliders
   selectedLightChanged();
-  updateLight();
-  updateDirection();
   lightChanged();
   numLightsChanged();
+  updateDirection();
+  updateLight();
   
   var zoom = $('#slider-zoom').slider("value");
   var near = $('#slider-near').slider("value");
   var far = $('#slider-far').slider("value");
-  renderer.initLightsPos();
-  renderer.initLightsDir();
   renderer.init(zoom,near,far);
   $('#slider-zoom-value').html(zoom);
   $('#slider-near-value').html(near);
@@ -202,10 +203,16 @@ function numLightsChanged() {
     $('#slider-x').slider({ disabled: false });
     $('#slider-y').slider({ disabled: false });
     $('#slider-z').slider({ disabled: false });
+    $('#direction-x').slider({ disabled: false });
+    $('#direction-y').slider({ disabled: false });
+    $('#direction-z').slider({ disabled: false });
   }else{
     $('#slider-x').slider({ disabled: true });
     $('#slider-y').slider({ disabled: true });
     $('#slider-z').slider({ disabled: true });
+    $('#direction-x').slider({ disabled: true });
+    $('#direction-y').slider({ disabled: true });
+    $('#direction-z').slider({ disabled: true });
   }
   showLightSelect();
 }
@@ -232,6 +239,7 @@ function updateNewLight(d, lightsPos){
     $('#slider-x-value').html(roundOneDecimal(lightsPos[index]));
     $('#slider-y-value').html(roundOneDecimal(lightsPos[index + 1]));
     $('#slider-z-value').html(roundOneDecimal(lightsPos[index + 2]));
+    updateLight();
   }
 }
 
@@ -244,6 +252,7 @@ function updateNewDirection(d, lightsDir){
     $('#direction-x-value').html(roundTwoDecimals(lightsDir[index]));
     $('#direction-y-value').html(roundTwoDecimals(lightsDir[index + 1]));
     $('#direction-z-value').html(roundTwoDecimals(lightsDir[index + 2]));
+    updateDirection();
   }
 }
 
@@ -300,7 +309,6 @@ function roundTwoDecimals (num){
 <select onchange="lightChanged()" id="select_light_id">
   <option value="1">Puntual</option>
   <option value="2">Directional</option>
-  <option value="3">Spotlight</option>
 </select>
 <button onclick="updateRenderer()">Reload Shader Code</button>
 
@@ -376,12 +384,12 @@ $('#slider-s').slider({value:80, min:1, max:128, step:1, range:"min", slide:upda
 $('#slider-ka').slider({value:1, max:1, step:0.01, range:"min", slide:updateLightAmbientTerm});
 $('#slider-kd').slider({value:1, max:1, step:0.01, range:"min", slide:updateLightDiffuseTerm});
 $('#slider-ks').slider({value:1, max:1, step:0.01, range:"min", slide:updateLightSpecularTerm});
-$('#slider-x').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#slider-y').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#slider-z').slider({value:-1, min:-10, max:10, step:0.1, slide:updateLight, change:updateLight});
-$('#direction-x').slider({value:0.4, min:-1, max:1, step:0.01, slide:updateDirection, change:updateDirection});
-$('#direction-y').slider({value:0.3, min:-1, max:1, step:0.01, slide:updateDirection, change:updateDirection});
-$('#direction-z').slider({value:0.6, min:-1, max:1, step:0.01, slide:updateDirection, change:updateDirection});
+$('#slider-x').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight});
+$('#slider-y').slider({value:1, min:-10, max:10, step:0.1, slide:updateLight});
+$('#slider-z').slider({value:-1, min:-10, max:10, step:0.1, slide:updateLight});
+$('#direction-x').slider({value:0.4, min:-1, max:1, step:0.01, slide:updateDirection});
+$('#direction-y').slider({value:0.3, min:-1, max:1, step:0.01, slide:updateDirection});
+$('#direction-z').slider({value:0.6, min:-1, max:1, step:0.01, slide:updateDirection});
 $('#slider-zoom').slider({value:32, min:0, max:180, step:1, slide:updatePerspective, change:updatePerspective});
 $('#slider-near').slider({value:0.5, min:0, max:5, step:0.1, slide:updatePerspective, change:updatePerspective});
 $('#slider-far').slider({value:4, min:0, max:10, step:0.1, slide:updatePerspective, change:updatePerspective});
