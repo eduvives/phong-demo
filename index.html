@@ -12,6 +12,10 @@
 <script type='text/javascript' src='js/jquery-ui-1.8.13.custom.min.js'></script>
 <script type='text/javascript' src='js/colorpicker.js'></script>
 <script type="text/javascript" src="js/renderer.js"></script>
+
+<script type="text/javascript" src="js/three.min.js"></script>
+
+
 <script type="text/javascript">
 var renderer = 0;
 
@@ -51,7 +55,7 @@ function updateRenderer() {
   var vertSrc = document.getElementById("code_vert").value;
   var fragSrc = document.getElementById("code_frag").value;
 
-  renderer.updateShader(vertSrc, fragSrc);
+  renderer.updateShader(vertSrc, fragSrc);  
   renderer.display();
 }
 
@@ -165,6 +169,10 @@ function modelChanged() {
   //renderer.updateModel('./hose.txt',zoom,near,far);
   //renderer.updateModel('./teapot.txt',zoom,near,far);
   renderer.display();
+
+
+  /* Texture */
+  renderer.loadTexture("vacio");
 }
 
 function exampleChanged() {
@@ -184,7 +192,14 @@ function exampleChanged() {
       document.getElementById("code_frag").value = document.getElementById("ToonFrag").value;
       document.getElementById("code_vert").value = document.getElementById("ToonVert").value;
       break;
-
+    case 4:
+      document.getElementById("code_frag").value = document.getElementById("PhongTextureFrag").value;
+      document.getElementById("code_vert").value = document.getElementById("PhongTextureVert").value;
+      break;
+    case 5:
+      document.getElementById("code_frag").value = document.getElementById("NormalMappingFrag").value;
+      document.getElementById("code_vert").value = document.getElementById("NormalMappingVert").value;
+      break;
   }
   updateRenderer();
   showNumColorSelect()
@@ -286,6 +301,7 @@ function roundTwoDecimals (num){
   <option value="1">Gouraud Shading</option>
   <option value="2">Phong Shading</option>
   <option value="3">Toon Shading</option>
+  <option value="4">Phong Texture Shading</option>
 </select>
 <select onchange="numColorsChanged()" id="select_num_colors">
   <option value="2">2 Colors</option>
@@ -549,6 +565,80 @@ $('#colorSelectorBg').ColorPicker({
   href="http://www.mathematik.uni-marburg.de/~thormae/lectures/graphics1/code/WebGLShaderLightMat/ShaderLightMat.html">WebGL applet</a> by <a
   href="http://www.uni-marburg.de/fb12/grafikmultimedia-en/team/thormae-en" target="_blank">Prof. Thorsten Thorm&auml;hlen</a>.
   Modified by <a href="http://wwwcg.in.tum.de/group/persons/kehrer.html" target="_blank">Johannes Kehrer</a> for educational purpose.</p>
+
+
+<textarea id="PhongTextureVert" style="display: none;">
+attribute vec3 position;
+attribute vec3 normal;
+attribute vec2 texCoord;
+uniform mat4 projection, modelview, normalMat;
+varying vec3 normalInterp;
+varying vec3 vertPos;
+varying vec2 vUv;
+
+void main(){
+  vec4 vertPos4 = modelview * vec4(position, 1.0);
+  vertPos = vec3(vertPos4) / vertPos4.w;
+  normalInterp = vec3(normalMat * vec4(normal, 0.0));
+  vUv = texCoord;
+
+  gl_Position = projection * vertPos4;
+}
+</textarea>
+  
+<textarea id="PhongTextureFrag" style="display: none;">
+precision mediump float;
+varying vec3 normalInterp;  // Surface normal
+varying vec3 vertPos;       // Vertex position
+uniform int mode;   // Rendering mode
+uniform float Ka;   // Ambient reflection coefficient
+uniform float Kd;   // Diffuse reflection coefficient
+uniform float Ks;   // Specular reflection coefficient
+uniform float shininessVal; // Shininess
+// Material color
+uniform vec3 ambientColor;
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform vec3 lightPos; // Light position
+// New light attributes
+uniform int lightType;
+uniform vec3 direction;
+uniform sampler2D texture;
+varying vec2 vUv;
+
+void main() {
+  vec3 texturaYa = texture2D( texture, vUv ).xyz;
+  vec3 N = normalize(normalInterp);
+  vec3 L;
+
+  if(lightType == 0){
+    L = normalize(lightPos - vertPos);
+  } else {
+    L = normalize(-direction);
+  }
+  
+  // Lambert's cosine law
+  float lambertian = max(dot(N, L), 0.0);
+  float specular = 0.0;
+  if(lambertian > 0.0) {
+    vec3 R = reflect(-L, N);      // Reflected light vector
+    vec3 V = normalize(-vertPos); // Vector to viewer
+    // Compute the specular term
+    float specAngle = max(dot(R, V), 0.0);
+    specular = pow(specAngle, shininessVal);
+  }
+  gl_FragColor = vec4(Ka * ambientColor +
+                      Kd * lambertian * (texturaYa) +
+                      Ks * specular * specularColor, 1.0);
+
+  // only ambient
+  if(mode == 2) gl_FragColor = vec4(Ka * ambientColor, 1.0);
+  // only diffuse
+  if(mode == 3) gl_FragColor = vec4(Kd * lambertian * diffuseColor, 1.0);
+  // only specular
+  if(mode == 4) gl_FragColor = vec4(Ks * specular * specularColor, 1.0);
+  }
+</textarea>
 
 <textarea id="PhongVert" style="display: none;">
 attribute vec3 position;
