@@ -21,11 +21,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.ksVal = 1.0;
   this.tones = 4.0;
   this.specularTones = 2.0;
-  this.texCoord = [
-    0.0, 0.0,  // lower-left corner  
-    1.0, 0.0,  // lower-right corner
-    0.5, 1.0   // top-center corner
-  ];
 
   // private members (inside closure)
   var canvasName = canvasName;
@@ -66,6 +61,10 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var projection = new Float32Array(16);
   var modelview = new Float32Array(16);
   var currentFileName = "./knot.txt";
+
+  // Variable para guardar la cantidad de atributos 
+  // en el programa actual
+  var currentAttributes = 0;
 
   // New lights attributes
   this.lightsNum = 3;
@@ -308,13 +307,48 @@ function Renderer(canvasName, vertSrc, fragSrc)
 
     if(error) return;
 
+    // Se obtiene el número de atributos en el programa actual, si es que este existe
+    // es decir, si es la primera vez que se llama a este método no existiría ningún progID
+    // y tendríamos problemas, por eso el if
+    if (progID != 0)
+    {
+      currentAttributes = gl.getProgramParameter(progID, gl.ACTIVE_ATTRIBUTES);
+    }
+    
     // create program and attach shaders
     progID = gl.createProgram();
+
     gl.attachShader(progID, vertID);
     gl.attachShader(progID, fragID);
 
+    // Del nuevo programa ahora actualizado, guardamos sus atributos
+    var newAttributes = gl.getProgramParameter(progID, gl.ACTIVE_ATTRIBUTES);
+
+    // Por suerte, en OpenGL, los índices de los atributos son siempe asignados en el
+    // rango [0, ..., NUMBER_OF_VERTEX_ATTRIBUTES - 1], por lo que podemos usar eso para
+    // activar o desactivar atributos
+    if (currentAttributes != 0)
+    {
+      if (newAttributes > currentAttributes) // Necesitamos activar los atributos faltantes
+      {
+        for (var i = currentAttributes; i < newAttributes; i++)
+        {
+            gl.enableVertexAttribArray(i);
+        }
+      }
+      else if (newAttributes < currentAttributes) // Necesitamos desactivar los atributos faltantes
+      {
+        for (var i = newAttributes; i < currentAttributes; i++)
+        {
+            gl.disableVertexAttribArray(i);
+        }
+      }
+    }
+
     // link the program
     gl.linkProgram(progID);
+
+    
     if (!gl.getProgramParameter(progID, gl.LINK_STATUS)) {
       alert(gl.getProgramInfoLog(progID));
       return;
@@ -507,79 +541,76 @@ function Renderer(canvasName, vertSrc, fragSrc)
   }
 
 
-// Initialize a texture and load an image.
-// When the image finished loading copy it into the texture.
-//
-this.loadTexture = function (url) 
-{
-  url = "./imgs/pruebaText.jpg"
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-
-  // Because images have to be downloaded over the internet
-  // they might take a moment until they are ready.
-  // Until then put a single pixel in the texture so we can
-  // use it immediately. When the image has finished downloading
-  // we'll update the texture with the contents of the image.
-  const level = 0;
-  const internalFormat = gl.RGBA;
-  const width = 1;
-  const height = 1;
-  const border = 0;
-  const srcFormat = gl.RGBA;
-  const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
-  gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                width, height, border, srcFormat, srcType,
-                pixel);
-
-  const image = new Image();
-  image.onload = function() {
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
-                  srcFormat, srcType, image);
-
-    // WebGL1 has different requirements for power of 2 images
-    // vs non power of 2 images so check if the image is a
-    // power of 2 in both dimensions.
-    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-       // Yes, it's a power of 2. Generate mips.
-       gl.generateMipmap(gl.TEXTURE_2D);
-       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    } else {
-       // No, it's not a power of 2. Turn off mips and set
-       // wrapping to clamp to edge
-       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    }
-  };
-  image.src = url;
-
-  return texture;
-}
-
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
-}
-  /*this.loadTexture = function (url)
+  // Inicializa una textura y carga una imagen 
+  // Cuando la imagen termina de cargar, la copia dentro de la textura
+  // Se recibe el path de la textura como parámetro
+  this.loadTexture = function (url) 
   {
+    // Si el path está vacío, se le pondrá un valor por defecto
+    if (!url)
+    {
+      url = "./imgs/pruebaText.jpg"    
+
+    }
+
+    // Se crea y bindea la textura 
     const texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+
+    // Debdo a que las imágenes tienen que ser seleccionadas desde el ordenador
+    // podría ser que tomen un momento para estar listas
+    // Hasta entonces, se pone un solo pixel en la textura, de modo que se pueda
+    // usar inmediatamente. Cuando la imagen finalmente termine de cargar
+    // se actualiza la textura con el contenido de la imagen
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const width = 1;
+    const height = 1;
+    const border = 0;
+    const srcFormat = gl.RGBA;
+    const srcType = gl.UNSIGNED_BYTE;
+    const pixel = new Uint8Array([0, 0, 255, 255]);  // Azul opaco
+    
+    // Se crea la imagen de textura con los parámetros previos
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                  width, height, border, srcFormat, srcType,
+                  pixel);
+
+    // Se declara una nueva imagen                
     const image = new Image();
 
-    image.onload = e => {
+    // Una vez esta cargue, se actualiza la textura
+    image.onload = function() {
       gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);    
-      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
+                    srcFormat, srcType, image);
+
+      // WebGL1 tiene diferentes requisitos para imágenes que son potencias de 2
+      // y las que no lo son, así que verificamos las dimensiones de la imagen
+      // para verificar que sea potencia de dos en ambas axis
+      if (isPowerOf2(image.width) && isPowerOf2(image.height)) {      
+        // Si lo es, generamos el mipmap
+        gl.generateMipmap(gl.TEXTURE_2D);
+      } else {
+        // Si no lo es, no se genera mipmap y se envuelve afianzando al borde
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      }
     };
 
-    url = "./imgs/pruebaText.jpg"
-    image.src = url;    
-    console.log(url)
+    // Se utiliza este método para poder invertir como se ve la textura
+    // y se visualice correctamente
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    return texture;
-  }*/
+    // Se define el source de la imagen al path que obtuvimos
+    image.src = url;
+  }
+
+  // Función para verificar si es potencia de 2
+  function isPowerOf2(value) 
+  {
+    return (value & (value - 1)) == 0;
+  }
 }
 

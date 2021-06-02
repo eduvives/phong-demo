@@ -12,10 +12,6 @@
 <script type='text/javascript' src='js/jquery-ui-1.8.13.custom.min.js'></script>
 <script type='text/javascript' src='js/colorpicker.js'></script>
 <script type="text/javascript" src="js/renderer.js"></script>
-
-<script type="text/javascript" src="js/three.min.js"></script>
-
-
 <script type="text/javascript">
 var renderer = 0;
 
@@ -50,8 +46,9 @@ function run() {
   $('#slider-near-value').html(near);
   $('#slider-far-value').html(far);
 
-  /* Texture */
-  renderer.loadTexture("vacio");
+  // Se inicializa la textura inicial, para cuando se seleccione
+  // el Phong Texture shader se pueda apreciar
+  renderer.loadTexture("");
 }
 
 function updateRenderer() {
@@ -171,6 +168,7 @@ function modelChanged() {
   //renderer.updateModel('./plane.txt',zoom,near,far);
   //renderer.updateModel('./hose.txt',zoom,near,far);
   //renderer.updateModel('./teapot.txt',zoom,near,far);
+  
   renderer.display();
 }
 
@@ -195,13 +193,10 @@ function exampleChanged() {
       document.getElementById("code_frag").value = document.getElementById("PhongTextureFrag").value;
       document.getElementById("code_vert").value = document.getElementById("PhongTextureVert").value;
       break;
-    case 5:
-      document.getElementById("code_frag").value = document.getElementById("NormalMappingFrag").value;
-      document.getElementById("code_vert").value = document.getElementById("NormalMappingVert").value;
-      break;
   }
   updateRenderer();
-  showNumColorSelect()
+  showNumColorSelect();
+  modelChanged();
 }
 
 function lightChanged() {
@@ -209,6 +204,23 @@ function lightChanged() {
   renderer.lightType = d;
   showDirectionSelect();
 }
+
+// Una vez que la página web esté cargada, si se hace click en el input de selección 
+// de fichero se activará la carga de la imagen como textura
+window.addEventListener("load", function(){  
+  document.querySelector("#textureFile").addEventListener("change", function()
+  {
+    // Se verifica la imagen seleccionada y se carga en el input de imagen
+    // para previsualizara y se manda finalmente a renderer.js para cargar la textura
+    if (this.files && this.files[0])
+    {
+      var img = document.querySelector("#texturePreview");
+      img.src = URL.createObjectURL(this.files[0]);
+      
+      renderer.loadTexture("./imgs/" + this.files[0].name);
+    }
+  });
+});
 
 function numLightsChanged() {
   var value = parseInt(document.getElementById("select_num_lights").value);
@@ -384,6 +396,29 @@ function roundTwoDecimals (num){
   <option value="2">third light</option>
 </select>
 
+<br><br>
+<table>
+  <tr>
+    <!-- Input para seleccionar la imagen de textura y previsualizarla -->
+    <td>
+      Texture
+      <p><i><small>*Save images first on the <b>imgs</b> folder, otherwise this wont work</small></i></p>
+        <input type="file" id="textureFile">
+        <br><br>
+        <img src="./imgs/pruebaText.jpg" alt="Texture preview", id="texturePreview" width="120" height="100">
+    </td>
+  </tr>
+</table>
+
+<table>
+  <td>
+    <tr>
+      <p>Check out our SkyBox Three.js test</p>
+      <a href="skybox.html" target="_blank">Skybox</a>
+    </tr>
+  </td>
+</table>
+  
 </td>
 <td>
 <h3>Vertex Shader</h3>
@@ -569,16 +604,26 @@ $('#colorSelectorBg').ColorPicker({
 <textarea id="PhongTextureVert" style="display: none;">
 attribute vec3 position;
 attribute vec3 normal;
+
+// Se tiene un atributo para recibir las coordenadas
+// de la textura
 attribute vec2 texCoord;
+
 uniform mat4 projection, modelview, normalMat;
 varying vec3 normalInterp;
 varying vec3 vertPos;
+
+// Utilizamos una variable varying para poder 
+// pasar las coordenadas vUv de la textura 
 varying vec2 vUv;
 
 void main(){
   vec4 vertPos4 = modelview * vec4(position, 1.0);
   vertPos = vec3(vertPos4) / vertPos4.w;
   normalInterp = vec3(normalMat * vec4(normal, 0.0));
+  
+  // Simplemente se iguala vUv a texCoord para poder pasarlo 
+  // al fragment shader
   vUv = texCoord;
 
   gl_Position = projection * vertPos4;
@@ -605,11 +650,19 @@ uniform int lightType;
 uniform mat3 lightsDir;
 uniform mat3 lightsPos; // Lights position
 
+// Se utiliza una variable uniform 
+// sampler 2D para poder recibir la texutra 2D
+// Utilizamos una variable varying para poder 
+// recibir las coordenadas vUv de la textura
 uniform sampler2D texture;
 varying vec2 vUv;
 
-void main() {
-  vec3 texturaYa = texture2D( texture, vUv ).xyz;
+void main() 
+{  
+  // Se crea la variable que será el color aplicable
+  // proveniento de la textura en la coordenada
+  vec3 finalTexture = texture2D(texture, vUv).xyz;
+  
   vec3 N = normalize(normalInterp);
   vec3 L;
 
@@ -638,7 +691,9 @@ void main() {
       float specAngle = max(dot(R, V), 0.0);
       specular = pow(specAngle, shininessVal);
     }
-    diffuse_total += Kd * lambertian * (diffuseColor * 0.25 + texturaYa * 0.75);
+    
+    // Se pone cierto porcentaje de textura al componente difuso final (como en la P2)
+    diffuse_total += Kd * lambertian * (diffuseColor * 0.25 + finalTexture * 0.75);
     specular_total += Ks * specular * specularColor;
     ambient_total += Ka * ambientColor;
   }
@@ -647,13 +702,15 @@ void main() {
                       diffuse_total +
                       specular_total, 1.0);
 
+  // En caso de que se utilice algún modo particular de un solo componente
+  // se agrega igual un porcentaje de textura a ese componente                      
   // only ambient
-  if(mode == 2) gl_FragColor = vec4(vec3(ambient_total * 0.75 + texturaYa * 0.25), 1.0);
+  if(mode == 2) gl_FragColor = vec4(vec3(ambient_total * 0.75 + finalTexture * 0.25), 1.0);
   // only diffuse
   if(mode == 3) gl_FragColor = vec4(diffuse_total, 1.0);
   // only specular
-  if(mode == 4) gl_FragColor = vec4(vec3(specular_total * 0.75 + texturaYa * 0.25), 1.0);
-  }
+  if(mode == 4) gl_FragColor = vec4(vec3(specular_total * 0.75 + finalTexture * 0.25), 1.0);
+}
 </textarea>
 
 <textarea id="PhongVert" style="display: none;">
