@@ -544,8 +544,8 @@ this.loadTexture = function (url)
   if (!url)
   {
     url = "./imgs/pruebaText.jpg"    
+
   }
-  console.log(url);
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -562,11 +562,13 @@ this.loadTexture = function (url)
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
   const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+  
   gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
                 width, height, border, srcFormat, srcType,
                 pixel);
 
   const image = new Image();
+
   image.onload = function() {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
@@ -578,16 +580,16 @@ this.loadTexture = function (url)
     if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
        // Yes, it's a power of 2. Generate mips.
        gl.generateMipmap(gl.TEXTURE_2D);
-       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     } else {
        // No, it's not a power of 2. Turn off mips and set
        // wrapping to clamp to edge
        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-       //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     }
   };
+
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
   image.src = url;
 
   return texture;
@@ -596,23 +598,5 @@ this.loadTexture = function (url)
 function isPowerOf2(value) {
   return (value & (value - 1)) == 0;
 }
-  /*this.loadTexture = function (url)
-  {
-    const texture = gl.createTexture();
-    const image = new Image();
-
-    image.onload = e => {
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);    
-      gl.generateMipmap(gl.TEXTURE_2D);
-    };
-
-    url = "./imgs/pruebaText.jpg"
-    image.src = url;    
-    console.log(url)
-
-    return texture;
-  }*/
 }
 
