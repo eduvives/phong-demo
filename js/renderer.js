@@ -5,7 +5,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
   // public member
   this.t = 0.0;
   this.modeVal = 1;
-  this.lightPos = [1.0, 1.0, -1.0];
   this.lightVec = new Float32Array(3);
   this.ambientColor = [0.2, 0.1, 0.0];
   this.diffuseColor = [0.8, 0.4, 0.0];
@@ -13,7 +12,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.clearColor = [0.0, 0.4, 0.7];
   this.attenuation = 0.01;
   this.lightType = 0; // 0 equals puntual
-  this.direction = [0.4, 0.3, 0.6];
   this.angle = 0.0;
   this.exponent = 0.0;
 
@@ -40,18 +38,20 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var normalLoc = 0;
   var projectionLoc = 0;
   var modelviewLoc = 0;
+  var lightsPositionLoc = 0;
+  var lightsDirectionLoc = 0;
   var normalMatrixLoc = 0;
   var modeLoc = 0;
   var kaLoc = 0;
   var kdLoc = 0;
   var ksLoc = 0;
   var attenuationLoc = 0;
+  var lightsNumLoc = 0;
+  var selectedLightLoc = 0;
   var lightTypeLoc = 0; // 0 equals puntual
-  var directionLoc = [0.5, 0.5, 0.5];
   var angleLoc = 0.0;
   var exponentLoc = 0.0;
   var shininessLoc = 0;
-  var lightPosLoc = 0;
   var lightVecLoc = 0;
   var ambientColorLoc = 0;
   var diffuseColorLoc = 0;
@@ -63,6 +63,62 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var currentFileName = "./knot.txt";
 
   var currentAttributes = 0;
+
+  // New lights attributes
+  this.lightsNum = 3;
+  this.selectedLight = 0;
+  var lightsPosition = new Float32Array(9);
+  var lightsDirection = new Float32Array(9);
+
+  // public
+  this.initLightsPos = function () {
+    lightsPosition[0] = 1;
+    lightsPosition[1] = 1;
+    lightsPosition[2] = -1;
+    lightsPosition[3] = 1;
+    lightsPosition[4] = 1;
+    lightsPosition[5] = -1;
+    lightsPosition[6] = 1;
+    lightsPosition[7] = 1;
+    lightsPosition[8] = -1;
+  }
+
+  // public
+  this.initLightsDir = function () {
+    lightsDirection[0] = 0.4;
+    lightsDirection[1] = 0.3;
+    lightsDirection[2] = 0.6;
+    lightsDirection[3] = 0.5;
+    lightsDirection[4] = 0.5;
+    lightsDirection[5] = 0.5;
+    lightsDirection[6] = 1;
+    lightsDirection[7] = 1;
+    lightsDirection[8] = -1;
+  }
+
+  // public
+  this.updateLightPos = function (index, x, y, z) {
+    lightsPosition[index] = x;
+    lightsPosition[index + 1] = y;
+    lightsPosition[index + 2] = z;
+  }
+
+  // public
+  this.updateLightDir = function (index, x, y, z) {
+    lightsDirection[index] = x;
+    lightsDirection[index + 1] = y;
+    lightsDirection[index + 2] = z;
+  }
+
+  // public
+  this.getLightsPos = function () {
+    return lightsPosition;
+  }
+
+  // public
+  this.getLightsDir = function () {
+    return lightsDirection;
+  }
 
   // public
   this.updateShader = function (newvertSrc, newfragSrc) {
@@ -191,14 +247,17 @@ function Renderer(canvasName, vertSrc, fragSrc)
     // corresponding UNIFORM variables of the shader
     gl.uniformMatrix4fv(projectionLoc, false, projection);
     gl.uniformMatrix4fv(modelviewLoc, false, modelview);
-    if(normalMatrixLoc != -1)  gl.uniformMatrix4fv(normalMatrixLoc, false, normalmatrix);
+    gl.uniformMatrix3fv(lightsPositionLoc, false, lightsPosition);
+    gl.uniformMatrix3fv(lightsDirectionLoc, false, lightsDirection);
+    if(normalMatrixLoc != -1) gl.uniformMatrix4fv(normalMatrixLoc, false, normalmatrix);
     if(modeLoc != -1) gl.uniform1i(modeLoc, this.modeVal);
     if(kaLoc != -1) gl.uniform1f(kaLoc, this.kaVal);
     if(kdLoc != -1) gl.uniform1f(kdLoc, this.kdVal);
     if(ksLoc != -1) gl.uniform1f(ksLoc, this.ksVal);
     if(attenuationLoc != -1) gl.uniform1f(attenuationLoc, this.attenuation);
+    if(lightsNumLoc != -1) gl.uniform1i(lightsNumLoc, this.lightsNum);
+    if(selectedLightLoc != -1) gl.uniform1i(selectedLightLoc, this.selectedLight);
     if(shininessLoc != -1) gl.uniform1f(shininessLoc, this.shininess);
-    if(lightPosLoc != -1) gl.uniform3fv(lightPosLoc, this.lightPos);
     if(lightVecLoc != -1) gl.uniform3fv(lightVecLoc, this.lightVec);
     if(ambientColorLoc != -1) gl.uniform3fv(ambientColorLoc, this.ambientColor);
     if(diffuseColorLoc != -1) gl.uniform3fv(diffuseColorLoc, this.diffuseColor);
@@ -206,7 +265,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
     if(tonesLoc != -1) gl.uniform1f(tonesLoc, this.tones);
     if(specularTonesLoc != -1) gl.uniform1f(specularTonesLoc, this.specularTones);
     if(lightTypeLoc != -1) gl.uniform1i(lightTypeLoc, this.lightType);
-    if(directionLoc != -1) gl.uniform3fv(directionLoc, this.direction);
     if(angleLoc != -1) gl.uniform1f(angleLoc, this.angle);
     if(exponentLoc != -1) gl.uniform1f(exponentLoc, this.exponent);
 
@@ -299,22 +357,24 @@ else if (newAttributes < currentAttributes) // We need to disable the extra attr
     // retrieve the location of the UNIFORM variables of the shader
     projectionLoc = gl.getUniformLocation(progID, "projection");
     modelviewLoc = gl.getUniformLocation(progID, "modelview");
+    lightsPositionLoc = gl.getUniformLocation(progID, "lightsPos");
+    lightsDirectionLoc = gl.getUniformLocation(progID, "lightsDir");
     normalMatrixLoc = gl.getUniformLocation(progID, "normalMat");
     modeLoc = gl.getUniformLocation(progID, "mode");
-    lightPosLoc = gl.getUniformLocation(progID, "lightPos");
     lightVecLoc = gl.getUniformLocation(progID, "lightVec");
     ambientColorLoc = gl.getUniformLocation(progID, "ambientColor");
     diffuseColorLoc = gl.getUniformLocation(progID, "diffuseColor");
     specularColorLoc = gl.getUniformLocation(progID, "specularColor");
     shininessLoc = gl.getUniformLocation(progID, "shininessVal");
     attenuationLoc = gl.getUniformLocation(progID, "attenuationVal");
+    lightsNumLoc = gl.getUniformLocation(progID, "lightsNum");
+    selectedLightLoc = gl.getUniformLocation(progID, "actualLight");
     kaLoc = gl.getUniformLocation(progID, "Ka");
     kdLoc = gl.getUniformLocation(progID, "Kd");
     ksLoc = gl.getUniformLocation(progID, "Ks");
     tonesLoc = gl.getUniformLocation(progID, "uTones");
     specularTonesLoc = gl.getUniformLocation(progID, "uSpecularTones");
     lightTypeLoc = gl.getUniformLocation(progID, "lightType");
-    directionLoc = gl.getUniformLocation(progID, "direction");
     angleLoc = gl.getUniformLocation(progID, "angle");
     exponentLoc = gl.getUniformLocation(progID, "exponent");
   }
