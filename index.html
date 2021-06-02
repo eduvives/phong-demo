@@ -13,9 +13,6 @@
 <script type='text/javascript' src='js/colorpicker.js'></script>
 <script type="text/javascript" src="js/renderer.js"></script>
 
-<script type="text/javascript" src="js/three.min.js"></script>
-
-
 <script type="text/javascript">
 var renderer = 0;
 
@@ -37,6 +34,8 @@ function run() {
   $('#slider-zoom-value').html(zoom);
   $('#slider-near-value').html(near);
   $('#slider-far-value').html(far);
+
+  renderer.loadTexture("");
 }
 
 function updateRenderer() {
@@ -116,11 +115,8 @@ function modelChanged() {
   //renderer.updateModel('./plane.txt',zoom,near,far);
   //renderer.updateModel('./hose.txt',zoom,near,far);
   //renderer.updateModel('./teapot.txt',zoom,near,far);
+  
   renderer.display();
-
-
-  /* Texture */
-  renderer.loadTexture("vacio");
 }
 
 function exampleChanged() {
@@ -144,13 +140,10 @@ function exampleChanged() {
       document.getElementById("code_frag").value = document.getElementById("PhongTextureFrag").value;
       document.getElementById("code_vert").value = document.getElementById("PhongTextureVert").value;
       break;
-    case 5:
-      document.getElementById("code_frag").value = document.getElementById("NormalMappingFrag").value;
-      document.getElementById("code_vert").value = document.getElementById("NormalMappingVert").value;
-      break;
   }
   updateRenderer();
-  showNumColorSelect()
+  showNumColorSelect();
+  modelChanged();
 }
 
 function lightChanged() {
@@ -158,6 +151,21 @@ function lightChanged() {
   renderer.lightType = d;
   showDirectionSelect();
 }
+
+
+window.addEventListener("load", function(){  
+  document.querySelector("#textureFile").addEventListener("change", function()
+  {
+
+    if (this.files && this.files[0])
+    {
+      var img = document.querySelector("#texturePreview");
+      img.src = URL.createObjectURL(this.files[0]);
+      
+      renderer.loadTexture("./imgs/" + this.files[0].name);
+    }
+  });
+});
 
 </script>
 </head>
@@ -240,6 +248,26 @@ function lightChanged() {
  <tr>
   <td align='right'>Far Plane :</td> <td id='slider-far-value'  width='30px'>4</td><td width='150px'><div id='slider-far'/></td>
  </tr>
+</table>
+
+<table>
+  <tr>
+    <td>
+      Texture
+      <p><i><small>*Save images first on the <b>imgs</b> folder, otherwise this wont work</small></i></p>
+        <input type="file" id="textureFile">
+        <br><br>
+        <img src="./imgs/pruebaText.jpg" alt="Texture preview", id="texturePreview" width="120" height="100">
+    </td>
+  </tr>
+</table>
+<table>
+  <td>
+    <tr>
+      <p>Check out our SkyBox Three.js test</p>
+      <a href="skybox.html" target="_blank">Skybox</a>
+    </tr>
+  </td>
 </table>
 
 </td>

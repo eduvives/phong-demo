@@ -23,11 +23,6 @@ function Renderer(canvasName, vertSrc, fragSrc)
   this.ksVal = 1.0;
   this.tones = 4.0;
   this.specularTones = 2.0;
-  this.texCoord = [
-    0.0, 0.0,  // lower-left corner  
-    1.0, 0.0,  // lower-right corner
-    0.5, 1.0   // top-center corner
-  ];
 
   // private members (inside closure)
   var canvasName = canvasName;
@@ -66,6 +61,8 @@ function Renderer(canvasName, vertSrc, fragSrc)
   var projection = new Float32Array(16);
   var modelview = new Float32Array(16);
   var currentFileName = "./knot.txt";
+
+  var currentAttributes = 0;
 
   // public
   this.updateShader = function (newvertSrc, newfragSrc) {
@@ -250,13 +247,45 @@ function Renderer(canvasName, vertSrc, fragSrc)
 
     if(error) return;
 
+    // Gets the number of attributes in the current and new programs
+    if (progID != 0)
+    {
+      currentAttributes = gl.getProgramParameter(progID, gl.ACTIVE_ATTRIBUTES);
+    }
     // create program and attach shaders
     progID = gl.createProgram();
+
     gl.attachShader(progID, vertID);
     gl.attachShader(progID, fragID);
 
+      // nUEVO
+  var newAttributes = gl.getProgramParameter(progID, gl.ACTIVE_ATTRIBUTES);
+
+  // Fortunately, in OpenGL, attribute index values are always assigned in the
+// range [0, ..., NUMBER_OF_VERTEX_ATTRIBUTES - 1], so we can use that to
+// enable or disable attributes
+if (currentAttributes != 0)
+{
+if (newAttributes > currentAttributes) // We need to enable the missing attributes
+{
+  for (var i = currentAttributes; i < newAttributes; i++)
+  {
+      gl.enableVertexAttribArray(i);
+  }
+}
+else if (newAttributes < currentAttributes) // We need to disable the extra attributes
+{
+  for (var i = newAttributes; i < currentAttributes; i++)
+  {
+      gl.disableVertexAttribArray(i);
+  }
+}
+}
+
     // link the program
     gl.linkProgram(progID);
+
+    
     if (!gl.getProgramParameter(progID, gl.LINK_STATUS)) {
       alert(gl.getProgramInfoLog(progID));
       return;
@@ -452,7 +481,11 @@ function Renderer(canvasName, vertSrc, fragSrc)
 //
 this.loadTexture = function (url) 
 {
-  url = "./imgs/pruebaText.jpg"
+  if (!url)
+  {
+    url = "./imgs/pruebaText.jpg"    
+  }
+  console.log(url);
   const texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -492,7 +525,7 @@ this.loadTexture = function (url)
        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+       //gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     }
   };
   image.src = url;
